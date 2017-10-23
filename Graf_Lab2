@@ -1,0 +1,240 @@
+#include <allegro.h>
+#include <time.h>
+#include <stdio.h>
+
+#define LEFT 220
+#define RIGHT 400
+#define TOP 160
+#define BOTTOM 400
+
+int init() {
+
+    int depth, res;
+
+    allegro_init();
+
+    if ((depth  = desktop_color_depth()) == 0) depth = 32;
+    set_color_depth(depth);
+
+    if ((res = set_gfx_mode(GFX_AUTODETECT_WINDOWED, 640, 480, 0, 0)) != 0) {
+        allegro_message(allegro_error);
+        exit(-1);
+    }
+
+    install_keyboard();
+
+    set_palette(default_palette);
+    clear_to_color(screen, makecol(255,255,255));
+
+return 0;
+}
+
+void rysujlinie_pozioma(int x0, int y0, int x1, int y1) {
+
+    int x;
+    float dy, dx, y, m;
+
+    dy = y1 - y0;
+    dx = x1 - x0;
+    m = dy/dx;
+    y = y0;
+
+    for(x = x0; x <= x1; x++) {
+        if ((x%3) == 1) putpixel(screen,x,(int) (y+0.5), makecol(0,0,0));
+        y += m;
+    }
+}
+
+void rysujlinie_pionowa(int x0, int y0, int x1, int y1) {
+
+    int y;
+    float dy, dx, x, m;
+
+    dy = y1 - y0;
+    dx = x1 - x0;
+    m = dx/dy;
+    x = x0;
+
+    for(y = y0; y <= y1; y++) {
+        if ((y%3) == 1) putpixel(screen,x,(int) (y+0.5), makecol(0,0,0));
+        x += m;
+    }
+}
+
+void losujpunkty(int * xt1p1, int * xt1p2, int * xt1p3, int * xt2p1, int * xt2p2, int * xt2p3, int * yt1p1, int * yt1p2, int * yt1p3, int * yt2p1, int * yt2p2, int * yt2p3) {
+
+    *xt1p1 = rand() % 360 + 130;
+    *xt1p2 = rand() % 360 + 130;
+    *xt1p3 = rand() % 360 + 130;
+    *xt2p1 = rand() % 360 + 130;
+    *xt2p2 = rand() % 360 + 130;
+    *xt2p3 = rand() % 360 + 130;
+    *yt1p1 = rand() % 360 + 100;
+    *yt1p2 = rand() % 360 + 100;
+    *yt1p3 = rand() % 360 + 100;
+    *yt2p1 = rand() % 360 + 100;
+    *yt2p2 = rand() % 360 + 100;
+    *yt2p3 = rand() % 360 + 100;
+
+}
+
+unsigned char calcRegCode(int x, int y) {
+
+    unsigned char result = 0;
+
+    if (x < LEFT)   result |= 0x1;
+    if (x > RIGHT)  result |= 0x2;
+    if (y > BOTTOM) result |= 0x4;
+    if (y < TOP)    result |= 0x8;
+
+    return result;
+}
+
+void Cohen_Sutherland(int x1, int y1, int x2, int y2) {
+
+    unsigned char rcode1, rcode2, rcode;
+    int x, y;
+
+/* Algorytm Cohena-Sutherlanda */
+/* 1. Zakoduj koñce odcinka zgodnie z kodami obszarów */
+    rcode1 = calcRegCode(x1, y1);
+    rcode2 = calcRegCode(x2, y2);
+/* 2. Je¿eli iloczyn logiczny (AND) tych kodów <>0,
+to odcinek mo¿e byæ pominiêty (w ca³oœci poza
+oknem) - zaznacz go na czerwono */
+    if (rcode1 & rcode2) {
+     line(screen, x1, y1, x2, y2,  makecol(255,0,0));
+    }
+/* 3. Je¿eli suma logiczna (OR) tych kodów = 0,
+to odcinek w ca³oœci mieœci siê w okienku
+- zaznacz go na zielono */
+    else if ((rcode1 | rcode2) == 0) {
+     line(screen, x1, y1, x2, y2,  makecol(0,255,0));
+    } else {
+/* pozostale przypadki - przeciecie z krawedzia okna */
+    do {
+        if (rcode1 != 0) {
+            rcode = rcode1;
+        } else {
+            rcode = rcode2;
+        }
+
+/* pozostale przypadki - przeciecie z krawedzia okna */
+        if (rcode & 0x1) {
+            y = y1+(y2-y1)*(LEFT-x1)/(x2-x1);
+            x = LEFT;
+        } else if (rcode & 0x2) {
+            y = y1+(y2-y1)*(RIGHT-x1)/(x2-x1);
+            x = RIGHT;
+        } else if (rcode & 0x4) {
+            x = x1+(x2-x1)*(BOTTOM-y1)/(y2-y1);
+            y = BOTTOM;
+        } else if (rcode & 0x8) {
+            x = x1+(x2-x1)*(TOP-y1)/(y2-y1);
+            y = TOP;
+        }
+
+        if (rcode == rcode1) {
+            line(screen, x1, y1, x, y,  makecol(255,0,0));
+            x1 = x;
+            y1 = y;
+            rcode1 = calcRegCode(x1, y1);
+        } else {
+            line(screen, x2, y2, x, y,  makecol(255,0,0));
+            x2 = x;
+            y2 = y;
+            rcode2 = calcRegCode(x2, y2);
+        }
+        } while ((rcode1 & rcode2) == 0 && (rcode1 | rcode2) != 0);
+
+        if ((rcode1 | rcode2) == 0) {
+            line(screen, x1, y1, x2, y2,  makecol(0,255,0));
+        } else {
+            line(screen, x1, y1, x2, y2,  makecol(0,255,0));
+        }
+    }
+}
+
+void rysujtrojkaty(int xt1p1, int xt1p2, int xt1p3, int xt2p1, int xt2p2, int xt2p3, int yt1p1, int yt1p2, int yt1p3, int yt2p1, int yt2p2, int yt2p3) {
+
+    /* pierwszy trojkat */
+    line(screen, xt1p1, yt1p1, xt1p2, yt1p2, 0);
+    line(screen, xt1p1, yt1p1, xt1p3, yt1p3, 0);
+    line(screen, xt1p3, yt1p3, xt1p2, yt1p2, 0);
+
+    /* drugi trojkat */
+    line(screen, xt2p1, yt2p1, xt2p2, yt2p2, 0);
+    line(screen, xt2p1, yt2p1, xt2p3, yt2p3, 0);
+    line(screen, xt2p3, yt2p3, xt2p2, yt2p2, 0);
+
+}
+
+void wymaztrojkaty(int xt1p1, int xt1p2, int xt1p3, int xt2p1, int xt2p2, int xt2p3, int yt1p1, int yt1p2, int yt1p3, int yt2p1, int yt2p2, int yt2p3) {
+
+    /* pierwszy trojkat */
+    line(screen, xt1p1, yt1p1, xt1p2, yt1p2, makecol(225,255,225));
+    line(screen, xt1p1, yt1p1, xt1p3, yt1p3, makecol(225,255,225));
+    line(screen, xt1p3, yt1p3, xt1p2, yt1p2, makecol(225,255,225));
+
+    /* drugi trojkat */
+    line(screen, xt2p1, yt2p1, xt2p2, yt2p2, makecol(225,255,225));
+    line(screen, xt2p1, yt2p1, xt2p3, yt2p3, makecol(225,255,225));
+    line(screen, xt2p3, yt2p3, xt2p2, yt2p2, makecol(225,255,225));
+
+}
+
+void rysujprostokat() {
+
+    line(screen, LEFT, BOTTOM, RIGHT, BOTTOM, 205);
+    line(screen, LEFT, BOTTOM, LEFT, TOP, 205);
+    line(screen, LEFT, TOP, RIGHT, TOP, 205);
+    line(screen, RIGHT, BOTTOM, RIGHT, TOP, 205);
+
+}
+
+int main()
+{
+    /* wspolrzedne trojkatow */
+    int xt1p1, xt1p2, xt1p3, xt2p1, xt2p2, xt2p3, yt1p1, yt1p2, yt1p3, yt2p1, yt2p2, yt2p3;
+
+    init();
+    srand(time(NULL));
+
+    textout_ex(screen,font,"GRAFIKA  KOMPUTEROWA",260,20,makecol(0,0,0),-1);
+    textout_ex(screen,font,"Laboratorium nr 3",267,30,makecol(0,0,0),-1);
+    textout_ex(screen,font,"ESC <- Zakoncz",515,5,makecol(0,0,0),-1);
+
+    /* linie poziome */
+    rysujlinie_pozioma(130,100,490,100);
+    rysujlinie_pozioma(130,460,490,460);
+
+    /* linie pionowe */
+    rysujlinie_pionowa(130,100,130,460);
+    rysujlinie_pionowa(490,100,490,460);
+
+    losujpunkty(&xt1p1, &xt1p2, &xt1p3, &xt2p1, &xt2p2, &xt2p3, &yt1p1, &yt1p2, &yt1p3, &yt2p1, &yt2p2, &yt2p3);
+    rysujtrojkaty(xt1p1, xt1p2, xt1p3, xt2p1, xt2p2, xt2p3, yt1p1, yt1p2, yt1p3, yt2p1, yt2p2, yt2p3);
+
+    while(!key[KEY_ENTER]) {}
+
+    rysujprostokat();
+
+    while(!key[KEY_ENTER]) {}
+
+    wymaztrojkaty(xt1p1, xt1p2, xt1p3, xt2p1, xt2p2, xt2p3, yt1p1, yt1p2, yt1p3, yt2p1, yt2p2, yt2p3);
+
+    Cohen_Sutherland(xt1p1, yt1p1, xt1p2, yt1p2);
+    Cohen_Sutherland(xt1p1, yt1p1, xt1p3, yt1p3);
+    Cohen_Sutherland(xt1p3, yt1p3, xt1p2, yt1p2);
+    Cohen_Sutherland(xt2p1, yt2p1, xt2p2, yt2p2);
+    Cohen_Sutherland(xt2p1, yt2p1, xt2p3, yt2p3);
+    Cohen_Sutherland(xt2p3, yt2p3, xt2p2, yt2p2);
+
+
+
+    while(!key[KEY_ESC]) {}
+
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN();
