@@ -1,0 +1,37 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+int main()
+{
+int childpid;
+//int status=1;
+//int zakonczono;
+printf("startuje proces macierzysty pid %d\n",getpid());
+int i;
+
+for (i=0;i<5;i++){
+if ((childpid = fork()) == -1)
+    {
+    perror("nie moge forknac");
+    exit(2);
+    }
+else
+    if (childpid ==0 )
+	{
+	
+	printf("Proces potomny o pidzie %d z rodzica %d\n",getpid(),getppid());
+sleep(5);
+	exit(2);
+	}
+    
+}
+int j=0;
+for (j=0;j<5;j++){
+wait(NULL);
+}
+
+
+return 0;    
+}
