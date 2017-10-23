@@ -1,0 +1,37 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
+
+void oblsluga_zakonczenia_dziecka(int nr_sig)
+{
+printf("Rodzic już się dowiedział o zakończeniu procesu %d\n",wait(NULL));
+
+}
+int main()
+{
+signal(SIGCHLD,oblsluga_zakonczenia_dziecka);
+int childpid;
+//int status=1;
+//int zakonczono;
+printf("startuje proces macierzysty pid %d\n",getpid());
+if ((childpid = fork()) == -1)
+    {
+    perror("nie moge forknac");
+    exit(1);
+    }
+else
+    if (childpid ==0 )
+	{
+	
+	printf("Proces potomny o pidzie %d z rodzica %d\n",getpid(),getppid());
+	}
+    else
+	{
+	sleep(10);
+	printf("Proces macierzysty o pidzie %d i dziecku %d\n",getpid(),childpid);
+	}
+return 0;    
+}
