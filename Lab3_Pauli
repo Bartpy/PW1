@@ -1,0 +1,85 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/wait.h>
+
+int main(int argc, char ** argv) {
+
+	int pid, fd_1[2], fd_2[2], rd_1, wr_1, rd_2, wr_2, file, i;
+	char c[200], char bufor[1024];;
+
+	if (pipe(fd_1) == -1) {
+		printf("Wystapil blad! Potok pierwszy!\n");
+		exit(1);
+	}
+
+	if (pipe(fd_2) == -1) {
+		printf("Wystapil blad! Potok drugi!\n");
+		exit(1);
+	}
+
+	pid = fork();
+
+	if (pid == 0) {
+
+		close(fd_1[0]); 
+		close(fd_2[1]); 
+
+		if ((rd_2 = read(fd_2[0],&bufor,sizeof(bufor))) < 1) {
+			printf("[POTOMEK] Blad odczytania nazwy pliku!\n");
+			exit(1);
+		}
+
+		if ((file = open(bufor,O_RDWR,0600)) < 0) {
+			write(fd_1[1],"[POTOMEK] Nie da sie otworzyc takiego pliku!\n",45);
+		}
+
+		while ((rd_2 = read(file,&c,sizeof(c)-1)) > 0) {
+			c[rd_2] = 0;
+			if ((wr_1 = write(fd_1[1],&c,rd_2+1)) > 0) {} else { 
+				printf("[POTOMEK] Blad wpisywania!"); 
+			}
+		}
+	
+		close(fd_1[1]);
+		close(fd_2[0]); 
+
+	} else if (pid == -1) {
+
+		printf("Blad tworzenia procesu potomnego!\n");
+		exit(1);
+
+	} else {
+
+		close(fd_1[1]);
+		close(fd_2[0]);
+
+		printf("\n[RODZIC] Podaj nazwe pliku: ");
+		scanf("%s",bufor);
+	
+		if ((wr_2 = write(fd_2[1],&bufor,strlen(bufor))) > 0) {
+			printf("[RODZIC] Nazwa pliku zostala wyslana do procesu potomnego!\n");
+		} else {
+			printf("[RODZIC] Blad wysylania nazwy pliku!\n");
+		}
+
+		printf("\n");
+
+
+		while ((rd_1 = read(fd_1[0],&c,sizeof(c))) > 0) {
+			printf("%s",c);
+		}
+
+		printf("\n");
+
+		close(fd_1[0]); 
+		close(fd_2[1]);
+
+		wait(NULL);
+
+	}
+
+return 0;
+}
