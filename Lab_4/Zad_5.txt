@@ -1,0 +1,73 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <signal.h> 
+#include <errno.h>
+
+
+void obsluga_zakonczenia(int nr_sig) {
+
+	unlink("/tmp/od");
+	unlink("/tmp/do");
+	exit(0);
+
+}
+
+int main() {
+
+	int fd1, fd2;
+	int er, pid, blad;
+	char c, d;
+
+	signal(SIGINT,obsluga_zakonczenia);
+
+	if (((er = mknod("/tmp/do", 0666 | S_IFIFO, 0)) != 0) && (blad = errno) != EEXIST) {
+		printf("Wystapil blad!\n");
+		exit(1);
+	}
+
+	if (((er = mknod("/tmp/od", 0666 | S_IFIFO, 0)) != 0) && (blad = errno) != EEXIST) {
+		printf("Wystapil blad!\n");
+		exit(1);
+	}
+
+	pid = fork();
+
+	if (pid == 0) {
+
+		if (blad != EEXIST) fd1 = open("/tmp/do", O_RDONLY); else fd1 = open("/tmp/od", O_RDONLY);
+	
+		while (1) {
+
+		read(fd1,&c,1);
+
+		if (c != 1) {
+			printf("%c", c);
+		} else {
+			exit(0);
+
+		}
+		}
+		
+		close(fd1);
+
+	} else {
+
+		if (blad != EEXIST) fd2 = open("/tmp/od", O_WRONLY); else fd2 = open("/tmp/do", O_WRONLY);
+
+		scanf("%c", &d);
+
+		do {
+			if (write(fd2, &d, 1) < 0) break;
+			scanf("%c",&d);
+
+		} while (d != 27);
+
+		close(fd2);
+	}
+
+return 0;
+}

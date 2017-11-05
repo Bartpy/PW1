@@ -1,0 +1,21 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <signal.h> 
+#include <errno.h>
+#include <string.h>
+
+extern int errno;
+#define FIFO1 "/tmp/fifo.1"
+int main() {
+char buff[]="ala ma kota a kot ma ale";
+int fifo;
+if ((fifo = open(FIFO1, O_WRONLY )) < 0)
+    perror("nie moze otworzyc fifo1 do pisania");
+if (strlen(buff) != write(fifo,buff,strlen(buff)))
+    perror("blad zapisu do fifo");
+return(0);    
+}
