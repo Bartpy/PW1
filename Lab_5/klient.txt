@@ -1,0 +1,95 @@
+Plik klient.c
+
+#include "naglowki.h"
+
+int id_kolejki;
+Wiadomosc wiadomosc;
+int punkty=0;
+
+int rozmiar_wiadomosci=sizeof(Wiadomosc)-sizeof(long);
+
+void zakonczenie_programu(int nr_sig)
+{
+	wiadomosc.mtype=1;
+	wiadomosc.pid=getpid();
+	wiadomosc.typ_wiadomosci=ROZLACZENIE;
+	if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0)
+	{
+		perror("Blad zapisu do kolejki");
+	} else {
+		printf("Zgloszenie wyslano poprawnie\n");
+	}
+	printf("Zakonczono pomyslnie program\n");		
+	exit(0);
+}
+
+int main(){
+	signal(SIGINT,zakonczenie_programu);
+	int klucz_do_kolejki=ftok("serwer.c",123);
+	id_kolejki=msgget(klucz_do_kolejki,0);
+	if (id_kolejki==-1)
+	{
+		perror("Stworzenie kolejki IPC sie nie powiodlo");
+		exit(0);
+	}
+
+	wiadomosc.mtype=1;
+	wiadomosc.pid=getpid();
+	wiadomosc.typ_wiadomosci=POLACZENIE;
+	if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0)
+	{
+		perror("Blad zapisu do kolejki");
+		exit(0);
+	} else {
+		printf("Zgloszenie wyslano poprawnie\n");
+	}
+
+	while(1){
+		int symbol=0;
+		do {
+			printf("Wybierz symbol:   ");
+			printf("0.Kamien ");
+			printf("1.Papier ");
+			printf("2.Nozyce \n");
+			scanf("%d",&symbol); }
+		while (symbol<0 || symbol>2);
+
+		printf("Wybrales %d\n",symbol);
+
+		wiadomosc.mtype=1;
+		wiadomosc.pid=getpid();
+		wiadomosc.typ_wiadomosci=symbol;
+		if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0)
+		{
+			perror("Blad zapisu do kolejki");
+			exit(0);
+		} else {
+			printf("Zgloszenie wyslano poprawnie\n");
+		}
+		if(msgrcv(id_kolejki,&wiadomosc,rozmiar_wiadomosci,getpid(),0)!=rozmiar_wiadomosci){
+			perror("Blad odbioru wiadomosci");
+			exit(0);
+		} else{
+			if (wiadomosc.typ_wiadomosci==ZA_MALO_ZGLOSZEN){
+				printf("Za malo zgloszen\n");
+
+			} else
+				if (wiadomosc.typ_wiadomosci==ROZLACZENIE){
+					exit(0);
+
+				}	else	
+				{
+					printf("\nPunkty: %d ,",wiadomosc.punkty);
+					printf("Miejsce: %d ,",wiadomosc.miejsce);
+					printf("Ilosc graczy: %d\n",wiadomosc.ilosc_graczy);
+
+				}
+
+		}
+
+
+	}
+
+
+	return 0;
+}

@@ -1,0 +1,254 @@
+Plik serwer.c
+
+#include "naglowki.h"
+
+int id_kolejki;
+Wiadomosc wiadomosc;
+int rozmiar_wiadomosci=sizeof(Wiadomosc)-sizeof(long);
+Statystyki statystyki[ILOSC_GRACZY];
+int licznik,tura;
+
+void sortuj(){
+
+
+	int i, j, tempPunkty,tempPid,tempWykozystane,tempZgloszony;
+	for (i = 0; i<ILOSC_GRACZY-1; i++)
+	{
+		for (j=0; j<ILOSC_GRACZY-1-i; j++)
+		{
+			if (statystyki[j].punkty < statystyki[j+1].punkty)
+			{
+				tempPunkty = statystyki[j+1].punkty;
+				statystyki[j+1].punkty = statystyki[j].punkty;
+				statystyki[j].punkty = tempPunkty;
+
+				tempPid=statystyki[j+1].pid;
+				statystyki[j+1].pid=statystyki[j].pid;
+				statystyki[j].pid=tempPid;
+
+				tempWykozystane=statystyki[j+1].wykozystane;
+				statystyki[j+1].wykozystane=statystyki[j].wykozystane;
+				statystyki[j].wykozystane=tempWykozystane;
+
+				tempZgloszony=statystyki[j+1].zgloszony;
+				statystyki[j+1].zgloszony=statystyki[j].zgloszony;
+				statystyki[j].zgloszony=tempZgloszony;
+			}
+		}
+	}
+	int licznik=1;
+	for (i=0;i<ILOSC_GRACZY;i++){
+		if (statystyki[i].wykozystane==TRUE){
+			statystyki[i].miejsce=licznik;
+			licznik++;
+			printf("PID: %d, miejsce: %d, punkty %d\n",statystyki[i].pid,statystyki[i].miejsce,statystyki[i].punkty);
+		}
+
+
+	}
+
+
+}
+
+void zakonczenie_programu(int nr_sig)
+{
+	int i;
+	for (i=0;i<ILOSC_GRACZY;i++){
+		if(statystyki[i].pid!=0){
+
+			wiadomosc.typ_wiadomosci=ROZLACZENIE;
+			wiadomosc.mtype=statystyki[i].pid;
+
+			if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0){
+				perror("Blad wyslania wiadomosci");
+			}
+		}
+	}
+	if (msgctl(id_kolejki,IPC_RMID,NULL)==-1)
+	{
+		perror("Usuniecie kolejki IPC sie nie powiodlo");
+	} else {
+		printf("Zakonczono pomyslnie program\n");		
+	}
+	exit(0);
+}
+
+void dojscie_gracza(){
+
+	if(licznik==ILOSC_GRACZY){
+		printf("Brak miejsc na serwerze");
+		wiadomosc.typ_wiadomosci=ROZLACZENIE;
+		wiadomosc.mtype=wiadomosc.pid;
+
+		if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0){
+			perror("Blad wyslania wiadomosci");
+		}
+	} else {
+		int i;
+		for (i=0;i<ILOSC_GRACZY;i++){
+			if (statystyki[i].pid==0)
+			{
+				printf("Przychodzi gracz %d\n",wiadomosc.pid);
+				statystyki[i].pid=wiadomosc.pid;
+				statystyki[i].wykozystane=TRUE;
+				break;
+			}
+		}						
+		licznik++;
+	}
+
+}
+
+void wyjscie_gracza(){
+	int i;
+	for (i=0;i<ILOSC_GRACZY;i++){
+		if (statystyki[i].pid==wiadomosc.pid)
+		{
+			printf("Odchodzi gracz %d\n",wiadomosc.pid);
+			statystyki[i].pid=0;
+			statystyki[i].wykozystane=FALSE;
+			statystyki[i].punkty=0;
+			statystyki[i].miejsce=0;
+			break;
+		}
+	}
+	licznik--;
+
+}
+
+
+void wyslij_wyniki(){
+	int i;
+	for (i=0;i<ILOSC_GRACZY;i++){
+		if(statystyki[i].zgloszony==TRUE){
+
+			wiadomosc.typ_wiadomosci=STATYSTYKI;
+			wiadomosc.mtype=statystyki[i].pid;
+			wiadomosc.miejsce=statystyki[i].miejsce;
+			wiadomosc.ilosc_graczy=licznik;
+			wiadomosc.punkty=statystyki[i].punkty;
+
+
+			if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0){
+				perror("Blad wyslania wiadomosci");
+			}
+			statystyki[i].zgloszony=FALSE;
+		}
+	}
+
+}
+
+void podlicz_punkty(){
+
+	int i;
+	int ilosc_kamieni=0;
+	int ilosc_nozyc=0;
+	int ilosc_papierow=0;
+	for (i=0;i<ILOSC_GRACZY;i++){
+
+		if (statystyki[i].zgloszony==TRUE){
+
+			if (statystyki[i].symbol==KAMIEN) {ilosc_kamieni++;}
+			else if (statystyki[i].symbol==PAPIER) {ilosc_papierow++;}
+			else if (statystyki[i].symbol==NOZYCE) {ilosc_nozyc++;}
+
+		}
+	}
+
+	for (i=0;i<ILOSC_GRACZY;i++){
+
+		if (statystyki[i].zgloszony==TRUE){
+			if(statystyki[i].symbol==KAMIEN){
+				int punkty=ilosc_nozyc-ilosc_papierow;
+				statystyki[i].punkty+=punkty;
+
+				printf("Gracz: %d dostal %d punktow\n",statystyki[i].pid,punkty);
+			}
+			if(statystyki[i].symbol==PAPIER){
+				int punkty=ilosc_kamieni-ilosc_nozyc;
+				statystyki[i].punkty+=punkty;
+
+				printf("Gracz: %d dostal %d punktow\n",statystyki[i].pid,punkty);
+
+			}
+			if(statystyki[i].symbol==NOZYCE){
+				int punkty=ilosc_papierow-ilosc_kamieni;
+				statystyki[i].punkty+=punkty;
+
+
+				printf("Gracz: %d dostal %d punktow\n",statystyki[i].pid,punkty);
+			}
+		}
+
+	}
+}
+
+int main(){
+	signal(SIGINT,zakonczenie_programu);
+	int klucz_do_kolejki=ftok("serwer.c",123);
+	id_kolejki=msgget(klucz_do_kolejki,IPC_CREAT|0666);
+	if (id_kolejki==-1)
+	{
+		perror("Stworzenie kolejki IPC sie nie powiodlo");
+		exit(0);
+	}
+	while(1){
+		sleep(15);
+
+		printf("\n\nTura: %d\n\n",tura);
+		tura++;
+		int ilosc_zgloszen=0;
+		while(msgrcv(id_kolejki,&wiadomosc,rozmiar_wiadomosci,DO_SERWERA,IPC_NOWAIT)==rozmiar_wiadomosci){
+			if (wiadomosc.typ_wiadomosci==POLACZENIE){
+
+				dojscie_gracza();
+			}
+			else if (wiadomosc.typ_wiadomosci==ROZLACZENIE){
+				wyjscie_gracza();
+			} else{
+				int i;
+				for (i=0;i<ILOSC_GRACZY;i++){
+					if (statystyki[i].pid==wiadomosc.pid)
+					{
+						printf("Zgloszenie od gracza %d : ",wiadomosc.pid);
+						statystyki[i].symbol=wiadomosc.typ_wiadomosci;
+						if (statystyki[i].symbol==PAPIER) printf("papier\n");
+						if (statystyki[i].symbol==KAMIEN) printf("kamien\n");
+						if (statystyki[i].symbol==NOZYCE) printf("nozyce\n");
+						statystyki[i].zgloszony=TRUE;
+						break;
+					}
+				}
+				ilosc_zgloszen++;
+			}
+
+		}
+		if (ilosc_zgloszen==0){
+			printf("Brak zgloszen\n");
+		} else if(ilosc_zgloszen==1){
+			printf("Tylko jedno zgloszenie\n");
+			int pid_odbiorcy=wiadomosc.pid;
+			wiadomosc.typ_wiadomosci=ZA_MALO_ZGLOSZEN;
+			wiadomosc.mtype=pid_odbiorcy;
+			if(msgsnd(id_kolejki,&wiadomosc,rozmiar_wiadomosci,0)!=0){
+				perror("Blad wyslania wiadomosci");
+			}
+		} else
+		{	
+			printf("Wystarczajaca liczba zgloszen\n");
+			podlicz_punkty();
+			sortuj();
+			wyslij_wyniki();		
+
+
+		}
+	}
+
+
+
+
+
+
+
+	return 0;
+}

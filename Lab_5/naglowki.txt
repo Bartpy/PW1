@@ -1,0 +1,46 @@
+Plik: naglowki.h
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <wait.h>
+#include <signal.h>
+#include <string.h>
+#include <time.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+
+#define KAMIEN 0
+#define PAPIER 1
+#define NOZYCE 2
+#define ZA_MALO_ZGLOSZEN 3
+#define STATYSTYKI 4
+#define POLACZENIE 5
+#define ROZLACZENIE 6
+
+#define DO_SERWERA 1
+#define ILOSC_GRACZY 6
+
+#define TRUE 1
+#define FALSE 0
+
+typedef struct strukturaWiadomosci{
+	long mtype;
+	int pid;
+	int typ_wiadomosci;
+	int miejsce;
+	int ilosc_graczy;
+	int punkty;
+
+} Wiadomosc;
+
+typedef struct strukturaStatystyk{
+	int punkty;
+	int miejsce;
+	int pid;
+	int zgloszony;
+	int symbol;
+	int wykozystane;
+} Statystyki;
+
