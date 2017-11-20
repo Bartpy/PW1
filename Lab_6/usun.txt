@@ -1,0 +1,14 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+#define PERMS 0666
+int main()
+{
+int semid = -1; // identyfikator semafora
+if
+((semid = semget(ftok("/tmp",0), 1, PERMS)) < 0) perror("Nie ma takiego semafora!");
+semctl(semid,0,IPC_RMID,0);
+return 0;
+}
