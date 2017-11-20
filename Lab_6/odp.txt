@@ -1,0 +1,32 @@
+Co się dzieje gdy wykonamy operacje V (podniesienie) za pierwszym razem?
+Wartość semafora podnoszona jest do 1.
+
+
+Co się stanie gdy wykonamy operacje V za drugim razem?
+Wartość semafora podnoszona jest do 2.
+
+Ile razy możemy teraz wykonać operację P (opuszczenie)?
+Dwa razy.
+
+Otworzyć drugą konsolę i uruchomić nasz program, podnieść semafor, co się stało na pierwszym 
+terminalu?
+Można opuścić semafor.
+
+Opuścić semafor w pierwszym terminalu, co się stało?
+Semafor został opuszczony.
+
+Otworzyć trzeci terminal i podnieść semafor, czy na obu terminalach doszło do odblokowania?
+Na jednym.
+
+Komendą ipcs sprawdzić czy semafor został w systemie.
+Został.
+
+Uruchomić program podnieść kilka razy semafor i wyjść (nawet przez ^C)
+Nie usuwać semafora, uruchomić program jeszcze raz tym razem próbując opuścić semafor. Czy stan semafora został zapamiętany?
+Tak.
+
+Wprowadzić modyfikacje do tablic operacji polegającą na dodaniu opcji SEM_UNDO 
+Usunąć semafor, skompilować i uruchomić program.
+Powtórnie podnieść kilka razy semafor i wyjść
+Uruchomić i spróbować opuścić semafor. Czy udało nam się zapamiętać ten stan?
+Nie.
