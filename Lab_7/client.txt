@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <errno.h>
+#include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+int * liczba;
+int shmid, idftok, blad, semid;
+
+static struct sembuf op_lock[1] = {
+    0, -1, 0	
+};
+
+static struct sembuf op_unlock[1] = {
+    1, 1, 0	
+};
+
+void blokuj(int semid) {
+
+	if (semop(semid, &op_lock[0], 1) < 0) {
+		perror("blad lokowania semafora");
+		exit(1);
+	}
+}
+
+void odblokuj(int semid) {
+
+	if (semop(semid, &op_unlock[0], 1) < 0) {
+    		perror("blad odlokowania semafora");
+		exit(1);
+	}
+}
+
+void obsluga_zakonczenia(int nr_sig) {
+
+	shmdt(liczba);
+	exit(0);
+
+}
+
+int main() {
+
+	int i, tmp;
+
+	srand(time(NULL));
+	
+	signal(SIGINT, obsluga_zakonczenia);
+
+	if ((idftok = ftok("server.c", 7)) == -1) {
+		perror("ftok nie dziala");
+		exit(1);
+	}
+
+	if ((semid = semget(idftok, 2, 0600)) == -1) {
+		perror("semget nie dziala");
+		exit(1);
+	}
+
+	if ((shmid = shmget(idftok, sizeof(int), 0600)) == -1) {
+		perror("shmget nie dziala");
+		exit(1);
+	}
+
+	liczba = (int *) shmat(shmid, 0, 0);
+
+	for (i = 0; i < 10; i++) {
+
+		odblokuj(semid);
+		blokuj(semid);
+		tmp = *liczba;
+		printf("[%d] Aktualna wartosc to: %d\n", getpid(), tmp);
+		usleep(rand()%1000001);
+
+	}
+
+	shmdt(liczba);
+
+return 0;
+}
